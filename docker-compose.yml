@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # БД для user-service
+  user-postgres:
+    image: postgres:17-alpine
+    ports:
+      - "5432:5432" 
+    environment:
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: dbpassword
+      POSTGRES_DB: chat 
+    volumes:
+      - pgdata-user:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  user-service:
+    build:
+      context: ./user-service
+    restart: always
+    ports:
+      - '3001:3001'
+    environment:
+      DATABASE_URL: "postgresql://dbuser:dbpassword@user-postgres:5432/chat?schema=public"
+      JWT_SECRET: your-jwt-secret
+    depends_on:
+      - user-postgres
+    networks:
+      - backend
+
+  # БД для chat-service
+  chat-postgres:
+    image: postgres:17-alpine
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chat-db
+    volumes:
+      - pgdata-chat:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  chat-service:
+    build:
+      context: ./chat-service
+    ports:
+      - '3002:3002'
+    depends_on:
+      - chat-postgres
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@chat-postgres:5432/chat-db
+    volumes:
+      - ./chat-service:/usr/src/app
+    command: npm run start:prod
+    networks:
+      - backend
+
+volumes:
+  pgdata-user:
+  pgdata-chat:
+
+networks:
+  backend:
+    driver: bridge
