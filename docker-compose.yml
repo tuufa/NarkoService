@@ -47,13 +47,12 @@ services:
     build:
       context: ./chat-service
     ports:
-      - '3002:3002'
+      - '3003:3003' 
+      - '3002:3002'  
     depends_on:
       - chat-postgres
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@chat-postgres:5432/chat-db
-    volumes:
-      - ./chat-service:/usr/src/app
     command: npm run start:prod
     networks:
       - backend

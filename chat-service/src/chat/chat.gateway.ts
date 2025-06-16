@@ -2,23 +2,38 @@ import {
   WebSocketGateway,
   SubscribeMessage,
   MessageBody,
+  ConnectedSocket,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Server } from 'socket.io';
-import { ChatService } from './chat.service';
-import { SendMessageDto } from './send-message.dto';
+import { Server, WebSocket } from 'ws';
 
-@WebSocketGateway({ cors: true })
+@WebSocketGateway(3002)
 export class ChatGateway {
   @WebSocketServer()
   server: Server;
 
-  constructor(private chatService: ChatService) {}
-
   @SubscribeMessage('sendMessage')
-  async handleSendMessage(@MessageBody() dto: SendMessageDto) {
-    const msg = await this.chatService.saveMessage(dto);
-    this.server.emit('message', msg);
-    return msg;
+  handleMessage(
+    @ConnectedSocket() client: WebSocket,
+    @MessageBody() payload: any,
+  ) {
+    console.log('Received:', payload);
+    this.server.clients.forEach((c) => {
+      if (c !== client && c.readyState === WebSocket.OPEN) {
+        c.send(JSON.stringify({ event: 'message', data: `Echo: ${payload.text}` }));
+      }
+    });
+  }
+
+  afterInit() {
+    console.log('WebSocket Server initialized on port 3002');
+  }
+
+  handleConnection(client: WebSocket) {
+    console.log('Client connected');
+  }
+
+  handleDisconnect(client: WebSocket) {
+    console.log('Client disconnected');
   }
 }
